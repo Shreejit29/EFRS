@@ -3,9 +3,9 @@ from core.loader import find_column
 
 def process_raw_data(df):
 
-    current_col = find_column(df, ["current", "curr", "i"])
-    capacity_col = find_column(df, ["capacity", "mah"])
-    energy_col = find_column(df, ["energy", "wh", "mwh"])
+    current_col  = find_column(df, ["current"])
+    capacity_col = find_column(df, ["capacity"])
+    energy_col   = find_column(df, ["energy"])
 
     current = df[current_col].values
     sign = np.sign(current)
@@ -24,10 +24,10 @@ def process_raw_data(df):
 
     out = grouped.agg(
         Q_charge=(capacity_col, lambda x: x.max() - x.min()),
-        E_charge=(energy_col, lambda x: x.max() - x.min()),
+        E_charge=(energy_col,   lambda x: x.max() - x.min()),
     ).reset_index()
 
-    # Phase I assumption (locked earlier)
+    # Phase I assumption (locked)
     out["Q_discharge"] = out["Q_charge"]
     out["E_discharge"] = out["E_charge"]
 
