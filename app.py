@@ -1,48 +1,36 @@
 # app.py
 
 import streamlit as st
-import os
+import pandas as pd
 
 from phase1.pipeline import PhaseIPipeline
 
 st.set_page_config(page_title="EFRS – Phase I Test", layout="wide")
 
-st.title("🔋 EFRS – Phase I (Real Data)")
-st.caption("Raw battery data → per-cycle CE, EE, CEF")
+st.title("🔋 EFRS – Phase I")
+st.caption("Upload raw battery data → per-cycle CE, EE, CEF")
 
-DATA_DIR = "data/raw"
+# ---------------- File Upload ----------------
+st.subheader("Upload Raw Battery Dataset")
 
-st.subheader("Select Raw Dataset")
-
-available_files = sorted(
-    [f for f in os.listdir(DATA_DIR) if f.endswith(".csv")]
+uploaded_file = st.file_uploader(
+    "Choose a CSV file (time in seconds)",
+    type=["csv"]
 )
 
-data_source = st.radio(
-    "Data source",
-    ["GitHub dataset", "Upload file"],
-    horizontal=True
-)
+if uploaded_file is None:
+    st.info("Please upload a raw CSV file to proceed.")
+    st.stop()
 
-if data_source == "GitHub dataset":
-    filename = st.selectbox("Choose a raw dataset", available_files)
-    filepath = os.path.join(DATA_DIR, filename)
-else:
-    uploaded = st.file_uploader("Upload raw CSV", type=["csv"])
-    if uploaded is None:
-        st.stop()
-    filepath = uploaded
-
-st.divider()
-
-# Run Phase I
+# ---------------- Run Phase I ----------------
 st.subheader("Phase I Output")
 
 try:
-    pipeline = PhaseIPipeline(filepath)
+    pipeline = PhaseIPipeline(uploaded_file)
     df_results = pipeline.run()
 
     st.success("Phase I executed successfully ✔")
+
     st.dataframe(df_results, use_container_width=True)
 
 except Exception as e:
