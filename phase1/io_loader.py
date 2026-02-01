@@ -5,11 +5,7 @@ from pathlib import Path
 from typing import Union, IO
 from io import BytesIO
 
-from .config import (
-    TIME_COL,
-    CURRENT_COL,
-    VOLTAGE_COL,
-)
+from .config import TIME_COL, CURRENT_COL, VOLTAGE_COL
 
 REQUIRED_COLUMNS = [TIME_COL, CURRENT_COL, VOLTAGE_COL]
 
@@ -17,9 +13,7 @@ REQUIRED_COLUMNS = [TIME_COL, CURRENT_COL, VOLTAGE_COL]
 class RawDataLoader:
     """
     Handles loading and basic normalization of raw battery data.
-    Supports:
-    - file paths (str / Path)
-    - Streamlit UploadedFile (file-like)
+    Supports file paths and Streamlit UploadedFile objects.
     """
 
     def __init__(self, source: Union[str, Path, IO]):
@@ -27,40 +21,55 @@ class RawDataLoader:
 
     def load(self) -> pd.DataFrame:
         df = self._read_csv()
+        df = self._normalize_columns(df)
         self._validate_columns(df)
-        df = self._normalize(df)
+        df = self._normalize_rows(df)
         return df
 
     def _read_csv(self) -> pd.DataFrame:
-        """
-        Read CSV from path or file-like object safely.
-        """
-
-        # Case 1: File path
+        # Case 1: file path
         if isinstance(self.source, (str, Path)):
             path = Path(self.source)
             if not path.exists():
                 raise FileNotFoundError(f"File not found: {path}")
             return pd.read_csv(path)
 
-        # Case 2: Streamlit UploadedFile or file-like object
+        # Case 2: UploadedFile / file-like
         try:
             bytes_data = self.source.read()
             return pd.read_csv(BytesIO(bytes_data))
         except Exception as e:
             raise TypeError(
-                "Unsupported file input type. "
-                "Expected file path or file-like object."
+                "Unsupported file input. Expected CSV file."
             ) from e
+
+    @staticmethod
+    def _normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Normalize column names:
+        - strip spaces
+        - lowercase
+        """
+        df = df.copy()
+        df.columns = (
+            df.columns
+            .astype(str)
+            .str.strip()
+            .str.lower()
+        )
+        return df
 
     @staticmethod
     def _validate_columns(df: pd.DataFrame):
         missing = [col for col in REQUIRED_COLUMNS if col not in df.columns]
         if missing:
-            raise ValueError(f"Missing required columns: {missing}")
+            raise ValueError(
+                f"Missing required columns: {missing}\n"
+                f"Found columns: {list(df.columns)}"
+            )
 
     @staticmethod
-    def _normalize(df: pd.DataFrame) -> pd.DataFrame:
+    def _normalize_rows(df: pd.DataFrame) -> pd.DataFrame:
         df = df.copy()
 
         # Sort by time
