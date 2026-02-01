@@ -1,9 +1,9 @@
 # phase1/io_loader.py
 
 import pandas as pd
-import numpy as np
 from pathlib import Path
 from typing import Union, IO
+from io import BytesIO
 
 from .config import (
     TIME_COL,
@@ -17,16 +17,15 @@ REQUIRED_COLUMNS = [TIME_COL, CURRENT_COL, VOLTAGE_COL]
 class RawDataLoader:
     """
     Handles loading and basic normalization of raw battery data.
-    Supports file paths and file-like objects (e.g. Streamlit uploads).
+    Supports:
+    - file paths (str / Path)
+    - Streamlit UploadedFile (file-like)
     """
 
     def __init__(self, source: Union[str, Path, IO]):
         self.source = source
 
     def load(self) -> pd.DataFrame:
-        """
-        Load CSV and perform basic sanity checks.
-        """
         df = self._read_csv()
         self._validate_columns(df)
         df = self._normalize(df)
@@ -34,17 +33,25 @@ class RawDataLoader:
 
     def _read_csv(self) -> pd.DataFrame:
         """
-        Read CSV from path or file-like object.
+        Read CSV from path or file-like object safely.
         """
-        # Case 1: filepath (str or Path)
+
+        # Case 1: File path
         if isinstance(self.source, (str, Path)):
             path = Path(self.source)
             if not path.exists():
                 raise FileNotFoundError(f"File not found: {path}")
             return pd.read_csv(path)
 
-        # Case 2: file-like object (Streamlit UploadedFile)
-        return pd.read_csv(self.source)
+        # Case 2: Streamlit UploadedFile or file-like object
+        try:
+            bytes_data = self.source.read()
+            return pd.read_csv(BytesIO(bytes_data))
+        except Exception as e:
+            raise TypeError(
+                "Unsupported file input type. "
+                "Expected file path or file-like object."
+            ) from e
 
     @staticmethod
     def _validate_columns(df: pd.DataFrame):
