@@ -1,9 +1,13 @@
 import numpy as np
-import pandas as pd
+from core.loader import find_column
 
 def process_raw_data(df):
-    # Expect columns: current, capacity, energy
-    current = df["current"].values
+
+    current_col = find_column(df, ["current", "curr", "i"])
+    capacity_col = find_column(df, ["capacity", "mah"])
+    energy_col = find_column(df, ["energy", "wh", "mwh"])
+
+    current = df[current_col].values
     sign = np.sign(current)
 
     cycle = 0
@@ -19,13 +23,11 @@ def process_raw_data(df):
     grouped = df.groupby("cycle_index")
 
     out = grouped.agg(
-        Q_charge=("capacity", lambda x: x.max() - x.min()),
-        E_charge=("energy", lambda x: x.max() - x.min()),
-        T_mean=("temperature", "mean") if "temperature" in df.columns else ("cycle_index", "size"),
-        T_max=("temperature", "max") if "temperature" in df.columns else ("cycle_index", "size"),
+        Q_charge=(capacity_col, lambda x: x.max() - x.min()),
+        E_charge=(energy_col, lambda x: x.max() - x.min()),
     ).reset_index()
 
-    # Placeholder: symmetric assumption (will refine later)
+    # Phase I assumption (locked earlier)
     out["Q_discharge"] = out["Q_charge"]
     out["E_discharge"] = out["E_charge"]
 
