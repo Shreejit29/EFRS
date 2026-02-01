@@ -19,6 +19,8 @@ if uploaded_file:
     try:
         df = load_file(uploaded_file)
         data_type = detect_data_type(df)
+        st.write("Detected columns:")
+        st.write(df.columns.tolist())
 
         st.info(f"Detected data type: **{data_type}**")
 
