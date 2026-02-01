@@ -12,3 +12,9 @@ def load_file(uploaded_file):
 
     df.columns = df.columns.str.strip().str.lower()
     return df
+def find_column(df, candidates):
+    for col in df.columns:
+        for key in candidates:
+            if key in col:
+                return col
+    raise ValueError(f"None of these columns found: {candidates}")
